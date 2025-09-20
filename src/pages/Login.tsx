@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mail, Eye, EyeOff, Sparkles, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/lib/supabase';
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -23,7 +24,16 @@ export default function Login() {
       ...prev,
       [name]: value
     }));
-    setError(''); // Clear error when user types
+    setError('');
+  };
+
+  const hashPassword = async (password: string): Promise<string> => {
+    // Simple hash function for demo - in production use proper bcrypt
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,62 +42,63 @@ export default function Login() {
     setError('');
     
     try {
-      // Simulate API call to POST /api/auth/login
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      // Hash the input password
+      const hashedPassword = await hashPassword(formData.password);
 
-      if (response.ok) {
-        const data = await response.json();
-        // Store auth token and user data
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('userData', JSON.stringify(data.user));
-        navigate('/dashboard');
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Login failed. Please try again.');
+      // Get user from database
+      const { data: user, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', formData.email)
+        .eq('password_hash', hashedPassword)
+        .single();
+
+      if (fetchError || !user) {
+        setError('Invalid email or password');
+        setIsLoading(false);
+        return;
       }
-    } catch (error) {
-      // For demo purposes, simulate successful login
-      setTimeout(() => {
-        console.log('Login data:', formData);
-        localStorage.setItem('authToken', 'demo-token');
-        localStorage.setItem('userData', JSON.stringify({
-          id: '1',
-          name: 'Demo User',
-          email: formData.email,
-          isAdmin: formData.email.includes('admin')
-        }));
-        navigate('/dashboard');
-      }, 1500);
+
+      // Store user data in localStorage
+      const userData = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.is_admin
+      };
+
+      localStorage.setItem('authToken', 'authenticated');
+      localStorage.setItem('userData', JSON.stringify(userData));
+      
+      navigate('/dashboard');
+
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setError('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sweet-bg via-sweet-accent/20 to-sweet-bg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#FDEBD0] via-[#F7CAC9]/20 to-[#FDEBD0] flex items-center justify-center p-4">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-16 h-16 bg-sweet-secondary/20 rounded-full animate-bounce-gentle"></div>
-        <div className="absolute top-40 right-20 w-12 h-12 bg-sweet-primary/20 rounded-full animate-pulse-soft"></div>
-        <div className="absolute bottom-32 left-1/4 w-20 h-20 bg-sweet-accent/30 rounded-full animate-bounce-gentle" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute bottom-20 right-1/3 w-14 h-14 bg-sweet-secondary/15 rounded-full animate-pulse-soft" style={{ animationDelay: '0.5s' }}></div>
+        <div className="absolute top-20 left-10 w-16 h-16 bg-[#F75270]/20 rounded-full animate-bounce"></div>
+        <div className="absolute top-40 right-20 w-12 h-12 bg-[#DC143C]/20 rounded-full animate-pulse"></div>
+        <div className="absolute bottom-32 left-1/4 w-20 h-20 bg-[#F7CAC9]/30 rounded-full animate-bounce" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute bottom-20 right-1/3 w-14 h-14 bg-[#F75270]/15 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        <Card className="sweet-card border-0 shadow-2xl">
+        <Card className="border-2 border-[#F7CAC9] shadow-2xl bg-white">
           <CardHeader className="text-center pb-6">
             <div className="flex justify-center mb-4">
-              <div className="bg-gradient-to-r from-sweet-primary to-sweet-secondary p-3 rounded-full">
+              <div className="bg-gradient-to-r from-[#DC143C] to-[#F75270] p-3 rounded-full">
                 <Sparkles className="h-8 w-8 text-white" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-sweet-primary to-sweet-secondary bg-clip-text text-transparent">
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#DC143C] to-[#F75270] bg-clip-text text-transparent">
               Welcome Back
             </CardTitle>
             <CardDescription className="text-gray-600">
@@ -112,7 +123,7 @@ export default function Login() {
                   Email Address
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-sweet-primary" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#DC143C]" />
                   <Input
                     id="email"
                     name="email"
@@ -120,7 +131,7 @@ export default function Login() {
                     placeholder="Enter your email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="pl-10 border-sweet-accent/50 focus:border-sweet-primary focus:ring-sweet-primary/20"
+                    className="pl-10 border-[#F7CAC9]/50 focus:border-[#DC143C] focus:ring-[#DC143C]/20"
                     required
                   />
                 </div>
@@ -139,34 +150,24 @@ export default function Login() {
                     placeholder="Enter your password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="pr-10 border-sweet-accent/50 focus:border-sweet-primary focus:ring-sweet-primary/20"
+                    className="pr-10 border-[#F7CAC9]/50 focus:border-[#DC143C] focus:ring-[#DC143C]/20"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sweet-primary hover:text-sweet-secondary transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#DC143C] hover:text-[#F75270] transition-colors"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
 
-              {/* Forgot Password Link */}
-              <div className="text-right">
-                <Link 
-                  to="/forgot-password" 
-                  className="text-sm text-sweet-primary hover:text-sweet-secondary transition-colors duration-200"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
               {/* Submit Button */}
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-sweet-primary hover:bg-sweet-primary/90 text-white py-3 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg mt-6"
+                className="w-full bg-[#DC143C] hover:bg-[#DC143C]/90 text-white py-3 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg mt-6"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center">
@@ -184,7 +185,7 @@ export default function Login() {
                   Don't have an account?{' '}
                   <Link 
                     to="/register" 
-                    className="text-sweet-primary hover:text-sweet-secondary font-medium transition-colors duration-200"
+                    className="text-[#DC143C] hover:text-[#F75270] font-medium transition-colors duration-200"
                   >
                     Create account
                   </Link>
@@ -192,7 +193,7 @@ export default function Login() {
               </div>
 
               {/* Demo Credentials */}
-              <div className="mt-6 p-3 bg-sweet-accent/20 rounded-lg">
+              <div className="mt-6 p-3 bg-[#F7CAC9]/20 rounded-lg">
                 <p className="text-xs text-gray-600 text-center mb-2">Demo Credentials:</p>
                 <div className="text-xs text-gray-600 space-y-1">
                   <p><strong>User:</strong> user@demo.com / password123</p>

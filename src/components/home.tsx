@@ -1,15 +1,16 @@
-import React from "react";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ShoppingBag, Search, User, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ProductGrid from "./ProductGrid";
-import SearchFilterBar from "./SearchFilterBar";
-import { Link } from "react-router-dom";
 
 const Home = () => {
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [showSubscribeDialog, setShowSubscribeDialog] = useState(false);
+  const [email, setEmail] = useState("");
 
   // Animation variants
   const containerVariants = {
@@ -34,121 +35,27 @@ const Home = () => {
     },
   };
 
-  // Mock categories for the navbar - updated for Indian sweets
-  const categories = ["Ladoos", "Barfis", "Rasgullas", "Jalebis", "Kaju Katli"];
+  // Categories for the navbar - updated for Indian sweets
+  const categories = [
+    { name: "Ladoos", value: "ladoos" },
+    { name: "Barfis", value: "premium" },
+    { name: "Rasgullas", value: "spongy" },
+    { name: "Jalebis", value: "crispy" },
+    { name: "Kaju Katli", value: "premium" }
+  ];
+
+  const handleCategoryClick = (categoryValue: string) => {
+    setSelectedCategory(categoryValue);
+  };
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowSubscribeDialog(true);
+    setEmail("");
+  };
 
   return (
     <div className="min-h-screen bg-[#FDEBD0] flex flex-col">
-      {/* Navigation Bar */}
-      <nav className="sticky top-0 z-50 bg-white shadow-md px-4 md:px-8 py-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-[#DC143C]">Sweet Shop</h1>
-          </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            {categories.map((category, index) => (
-              <a
-                key={index}
-                href={`#${category.toLowerCase()}`}
-                className="text-gray-700 hover:text-[#F75270] transition-colors"
-              >
-                {category}
-              </a>
-            ))}
-          </div>
-
-          <div className="hidden md:flex items-center space-x-4">
-            {isLoggedIn ? (
-              <div className="flex items-center space-x-4">
-                <Button variant="ghost" size="icon">
-                  <ShoppingBag className="h-5 w-5 text-[#DC143C]" />
-                </Button>
-                <div className="h-8 w-8 rounded-full bg-[#F7CAC9] flex items-center justify-center">
-                  <User className="h-5 w-5 text-[#DC143C]" />
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Link to="/login">
-                  <Button
-                    variant="outline"
-                    className="border-[#F75270] text-[#F75270] hover:bg-[#F7CAC9] hover:text-[#DC143C]"
-                  >
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button className="bg-[#F75270] text-white hover:bg-[#DC143C]">
-                    Register
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? (
-                <X className="h-6 w-6 text-[#DC143C]" />
-              ) : (
-                <Menu className="h-6 w-6 text-[#DC143C]" />
-              )}
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden bg-white py-4 px-4">
-            <div className="flex flex-col space-y-3">
-              {categories.map((category, index) => (
-                <a
-                  key={index}
-                  href={`#${category.toLowerCase()}`}
-                  className="text-gray-700 hover:text-[#F75270] transition-colors py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {category}
-                </a>
-              ))}
-              {isLoggedIn ? (
-                <div className="flex items-center space-x-4 py-2">
-                  <Button variant="ghost" size="icon">
-                    <ShoppingBag className="h-5 w-5 text-[#DC143C]" />
-                  </Button>
-                  <div className="h-8 w-8 rounded-full bg-[#F7CAC9] flex items-center justify-center">
-                    <User className="h-5 w-5 text-[#DC143C]" />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col space-y-2 py-2">
-                  <Link to="/login" onClick={() => setIsMenuOpen(false)}>
-                    <Button
-                      variant="outline"
-                      className="w-full border-[#F75270] text-[#F75270] hover:bg-[#F7CAC9] hover:text-[#DC143C]"
-                    >
-                      Login
-                    </Button>
-                  </Link>
-                  <Link to="/register" onClick={() => setIsMenuOpen(false)}>
-                    <Button className="w-full bg-[#F75270] text-white hover:bg-[#DC143C]">
-                      Register
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </nav>
-
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-[#F7CAC9] to-[#FDEBD0] py-16 md:py-24">
         <div className="container mx-auto px-4 md:px-8">
@@ -217,20 +124,13 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Search and Filter Section */}
-      <section className="py-8 bg-white">
-        <div className="container mx-auto px-4 md:px-8">
-          <SearchFilterBar />
-        </div>
-      </section>
-
       {/* Products Section */}
       <section className="py-12 bg-white">
         <div className="container mx-auto px-4 md:px-8">
           <h2 className="text-3xl font-bold text-[#DC143C] mb-8">
             Our Traditional Indian Sweets
           </h2>
-          <ProductGrid />
+          <ProductGrid selectedCategory={selectedCategory} />
         </div>
       </section>
 
@@ -312,18 +212,53 @@ const Home = () => {
             Subscribe to our newsletter for special offers, new product
             announcements, and sweet tips!
           </p>
-          <div className="flex flex-col md:flex-row max-w-md mx-auto md:max-w-xl gap-2">
+          <form onSubmit={handleSubscribe} className="flex flex-col md:flex-row max-w-md mx-auto md:max-w-xl gap-2">
             <Input
               type="email"
               placeholder="Your email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="bg-white border-[#F75270] focus-visible:ring-[#DC143C]"
+              required
             />
-            <Button className="bg-[#DC143C] hover:bg-[#F75270] text-white">
+            <Button type="submit" className="bg-[#DC143C] hover:bg-[#F75270] text-white">
               Subscribe
             </Button>
-          </div>
+          </form>
         </div>
       </section>
+
+      {/* Subscribe Success Dialog */}
+      <Dialog open={showSubscribeDialog} onOpenChange={setShowSubscribeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-[#DC143C]">
+              🎉 Thank You for Subscribing! 🎉
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200 }}
+                className="my-4"
+              >
+                <div className="text-6xl mb-4">🍬</div>
+                <p className="text-lg">
+                  Welcome to our sweet family! You'll receive the latest updates on our delicious Indian sweets and special offers.
+                </p>
+              </motion.div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center mt-4">
+            <Button 
+              onClick={() => setShowSubscribeDialog(false)}
+              className="bg-[#DC143C] hover:bg-[#F75270] text-white"
+            >
+              Continue Shopping
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <footer className="bg-[#DC143C] text-white py-12">
@@ -414,12 +349,12 @@ const Home = () => {
               <ul className="space-y-2">
                 {categories.map((category, index) => (
                   <li key={index}>
-                    <a
-                      href={`#${category.toLowerCase()}`}
-                      className="hover:text-[#FDEBD0] transition-colors"
+                    <button
+                      onClick={() => handleCategoryClick(category.value)}
+                      className="hover:text-[#FDEBD0] transition-colors text-left"
                     >
-                      {category}
-                    </a>
+                      {category.name}
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -427,10 +362,9 @@ const Home = () => {
             <div>
               <h3 className="text-xl font-bold mb-4">Contact Us</h3>
               <address className="not-italic">
-                <p className="mb-2">123 Sweet Street</p>
-                <p className="mb-2">Candy Town, CT 12345</p>
-                <p className="mb-2">Phone: (123) 456-7890</p>
-                <p className="mb-2">Email: info@sweetshop.com</p>
+                <p className="mb-2">Town CRPF, BBSR</p>
+                <p className="mb-2">Phone: +91-9556078099</p>
+                <p className="mb-2">Email: sggghhf130@gmail.com</p>
               </address>
             </div>
           </div>

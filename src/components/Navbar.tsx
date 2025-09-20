@@ -1,23 +1,73 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Menu, X, ShoppingBag, User, LogOut } from 'lucide-react';
+import { Menu, X, ShoppingBag, User, LogOut, ChevronDown } from 'lucide-react';
 
 interface NavbarProps {
   isAuthenticated?: boolean;
   user?: { name: string; isAdmin: boolean };
   onLogout?: () => void;
+  onCategorySelect?: (category: string) => void;
 }
 
 export default function Navbar({ 
   isAuthenticated = false, 
   user = { name: 'John Doe', isAdmin: false },
-  onLogout = () => console.log('Logout clicked')
+  onLogout = () => console.log('Logout clicked'),
+  onCategorySelect = () => {}
 }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isActive = (path: string) => location.pathname === path;
+
+  const categories = [
+    { 
+      name: 'Ladoos', 
+      value: 'ladoos', 
+      image: '/images/Moti chur ladoo.jpeg',
+      description: 'Traditional round sweets'
+    },
+    { 
+      name: 'Kaju Katli', 
+      value: 'premium', 
+      image: '/images/kaju katli.jpeg',
+      description: 'Premium cashew sweets'
+    },
+    { 
+      name: 'Gulab Jamun', 
+      value: 'traditional', 
+      image: '/images/Gulab Jamun.jpeg',
+      description: 'Classic milk-based sweets'
+    },
+    { 
+      name: 'Jalebi', 
+      value: 'crispy', 
+      image: '/images/jalebi.jpeg',
+      description: 'Crispy spiral sweets'
+    },
+    { 
+      name: 'Rasmalai', 
+      value: 'milk-based', 
+      image: '/images/Rasmalai.jpeg',
+      description: 'Creamy milk desserts'
+    },
+    { 
+      name: 'Rasgulla', 
+      value: 'spongy', 
+      image: '/images/Rasgulla.jpeg',
+      description: 'Spongy cottage cheese balls'
+    }
+  ];
+
+  const handleCategoryClick = (category: string) => {
+    onCategorySelect(category);
+    navigate('/dashboard');
+    setIsCategoryOpen(false);
+    setIsMenuOpen(false);
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-lg border-b border-sweet-accent/20">
@@ -43,14 +93,41 @@ export default function Navbar({
             >
               Home
             </Link>
-            <Link
-              to="/shop"
-              className={`font-medium transition-colors duration-200 hover:text-sweet-primary ${
-                isActive('/shop') ? 'text-sweet-primary' : 'text-gray-700'
-              }`}
-            >
-              Shop
-            </Link>
+            
+            {/* Categories Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                className="flex items-center space-x-1 font-medium text-gray-700 hover:text-sweet-primary transition-colors duration-200"
+              >
+                <span>Categories</span>
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isCategoryOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {isCategoryOpen && (
+                <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-sweet-accent/20 py-2 z-50">
+                  <div className="grid grid-cols-2 gap-2 p-2">
+                    {categories.map((category) => (
+                      <button
+                        key={category.value}
+                        onClick={() => handleCategoryClick(category.value)}
+                        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-sweet-accent/20 transition-colors duration-200 text-left"
+                      >
+                        <img
+                          src={category.image}
+                          alt={category.name}
+                          className="w-12 h-12 rounded-lg object-cover border border-sweet-accent/30"
+                        />
+                        <div>
+                          <p className="font-medium text-gray-900">{category.name}</p>
+                          <p className="text-xs text-gray-500">{category.description}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
@@ -64,12 +141,12 @@ export default function Navbar({
                 </Link>
                 {user.isAdmin && (
                   <Link
-                    to="/inventory"
+                    to="/admin/add-sweet"
                     className={`font-medium transition-colors duration-200 hover:text-sweet-primary ${
-                      isActive('/inventory') ? 'text-sweet-primary' : 'text-gray-700'
+                      isActive('/admin/add-sweet') ? 'text-sweet-primary' : 'text-gray-700'
                     }`}
                   >
-                    Inventory
+                    Admin
                   </Link>
                 )}
                 <div className="flex items-center space-x-2">
@@ -128,15 +205,27 @@ export default function Navbar({
               >
                 Home
               </Link>
-              <Link
-                to="/shop"
-                className={`font-medium py-2 px-3 rounded-lg transition-colors duration-200 ${
-                  isActive('/shop') ? 'bg-sweet-accent text-sweet-primary' : 'text-gray-700 hover:bg-sweet-accent/50'
-                }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Shop
-              </Link>
+              
+              {/* Mobile Categories */}
+              <div className="px-3">
+                <p className="font-medium text-gray-700 mb-2">Categories</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {categories.map((category) => (
+                    <button
+                      key={category.value}
+                      onClick={() => handleCategoryClick(category.value)}
+                      className="flex items-center space-x-2 p-2 rounded-lg hover:bg-sweet-accent/20 transition-colors duration-200 text-left"
+                    >
+                      <img
+                        src={category.image}
+                        alt={category.name}
+                        className="w-8 h-8 rounded object-cover border border-sweet-accent/30"
+                      />
+                      <span className="text-sm font-medium text-gray-700">{category.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               
               {isAuthenticated ? (
                 <>
@@ -151,13 +240,13 @@ export default function Navbar({
                   </Link>
                   {user.isAdmin && (
                     <Link
-                      to="/inventory"
+                      to="/admin/add-sweet"
                       className={`font-medium py-2 px-3 rounded-lg transition-colors duration-200 ${
-                        isActive('/inventory') ? 'bg-sweet-accent text-sweet-primary' : 'text-gray-700 hover:bg-sweet-accent/50'
+                        isActive('/admin/add-sweet') ? 'bg-sweet-accent text-sweet-primary' : 'text-gray-700 hover:bg-sweet-accent/50'
                       }`}
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Inventory
+                      Admin Panel
                     </Link>
                   )}
                   <div className="flex items-center space-x-2 py-2 px-3">
@@ -194,6 +283,14 @@ export default function Navbar({
           </div>
         )}
       </div>
+      
+      {/* Overlay for dropdown */}
+      {isCategoryOpen && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setIsCategoryOpen(false)}
+        />
+      )}
     </nav>
   );
 }

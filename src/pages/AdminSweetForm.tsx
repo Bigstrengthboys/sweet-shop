@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Save, Upload } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface Sweet {
   id?: string;
@@ -15,7 +16,7 @@ interface Sweet {
   price: number;
   quantity: number;
   description: string;
-  image: string;
+  image_url: string;
 }
 
 export default function AdminSweetForm() {
@@ -29,7 +30,7 @@ export default function AdminSweetForm() {
     price: 0,
     quantity: 0,
     description: '',
-    image: ''
+    image_url: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState('');
@@ -46,20 +47,35 @@ export default function AdminSweetForm() {
 
   useEffect(() => {
     if (isEditing && id) {
-      // Simulate fetching sweet data for editing
-      const mockSweet: Sweet = {
-        id,
-        name: 'Gulab Jamun',
-        category: 'traditional',
-        price: 120,
-        quantity: 25,
-        description: 'Soft, spongy balls made from milk solids, fried and soaked in sugar syrup.',
-        image: '/images/Gulab Jamun.jpeg'
-      };
-      setFormData(mockSweet);
-      setImagePreview(mockSweet.image);
+      fetchSweet();
     }
   }, [id, isEditing]);
+
+  const fetchSweet = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sweets')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setFormData({
+          name: data.name,
+          category: data.category,
+          price: data.price,
+          quantity: data.quantity,
+          description: data.description || '',
+          image_url: data.image_url || ''
+        });
+        setImagePreview(data.image_url || '');
+      }
+    } catch (error) {
+      console.error('Error fetching sweet:', error);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -85,7 +101,7 @@ export default function AdminSweetForm() {
         setImagePreview(result);
         setFormData(prev => ({
           ...prev,
-          image: result
+          image_url: result
         }));
       };
       reader.readAsDataURL(file);
@@ -97,29 +113,43 @@ export default function AdminSweetForm() {
     setIsLoading(true);
 
     try {
-      const url = isEditing ? `/api/sweets/${id}` : '/api/sweets';
-      const method = isEditing ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      if (isEditing && id) {
+        // Update existing sweet
+        const { error } = await supabase
+          .from('sweets')
+          .update({
+            name: formData.name,
+            category: formData.category,
+            price: formData.price,
+            quantity: formData.quantity,
+            description: formData.description,
+            image_url: formData.image_url,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id);
 
-      if (response.ok) {
-        navigate('/dashboard');
+        if (error) throw error;
       } else {
-        throw new Error('Failed to save sweet');
+        // Add new sweet
+        const { error } = await supabase
+          .from('sweets')
+          .insert([
+            {
+              name: formData.name,
+              category: formData.category,
+              price: formData.price,
+              quantity: formData.quantity,
+              description: formData.description,
+              image_url: formData.image_url
+            }
+          ]);
+
+        if (error) throw error;
       }
+
+      navigate('/dashboard');
     } catch (error) {
-      // For demo purposes, simulate success
-      setTimeout(() => {
-        console.log('Sweet saved:', formData);
-        navigate('/dashboard');
-      }, 1000);
+      console.error('Error saving sweet:', error);
     } finally {
       setIsLoading(false);
     }
@@ -129,34 +159,28 @@ export default function AdminSweetForm() {
     if (!isEditing || !id) return;
     
     try {
-      const response = await fetch(`/api/sweets/${id}/restock`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ quantity: 10 }), // Add 10 items
-      });
+      const newQuantity = formData.quantity + 10;
+      
+      const { error } = await supabase
+        .from('sweets')
+        .update({ quantity: newQuantity })
+        .eq('id', id);
 
-      if (response.ok) {
-        setFormData(prev => ({
-          ...prev,
-          quantity: prev.quantity + 10
-        }));
-      }
-    } catch (error) {
-      // For demo, just update local state
+      if (error) throw error;
+
       setFormData(prev => ({
         ...prev,
-        quantity: prev.quantity + 10
+        quantity: newQuantity
       }));
+    } catch (error) {
+      console.error('Error restocking sweet:', error);
     }
   };
 
   return (
-    <div className="min-h-screen bg-sweet-bg">
+    <div className="min-h-screen bg-[#FDEBD0]">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-sweet-accent/20">
+      <header className="bg-white shadow-sm border-b border-[#F7CAC9]/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
             <Button
@@ -167,7 +191,7 @@ export default function AdminSweetForm() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Dashboard
             </Button>
-            <h1 className="text-xl font-bold text-sweet-primary">
+            <h1 className="text-xl font-bold text-[#DC143C]">
               {isEditing ? 'Edit Sweet' : 'Add New Sweet'}
             </h1>
           </div>
@@ -175,9 +199,9 @@ export default function AdminSweetForm() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card className="sweet-card">
+        <Card className="border-2 border-[#F7CAC9] shadow-lg">
           <CardHeader>
-            <CardTitle className="text-sweet-primary">
+            <CardTitle className="text-[#DC143C]">
               {isEditing ? 'Edit Sweet Details' : 'Add New Sweet'}
             </CardTitle>
             <CardDescription>
@@ -200,11 +224,11 @@ export default function AdminSweetForm() {
                       type="file"
                       accept="image/*"
                       onChange={handleImageChange}
-                      className="border-sweet-accent/50 focus:border-sweet-primary"
+                      className="border-[#F7CAC9]/50 focus:border-[#DC143C]"
                     />
                   </div>
                   {imagePreview && (
-                    <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-sweet-accent">
+                    <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-[#F7CAC9]">
                       <img
                         src={imagePreview}
                         alt="Preview"
@@ -225,7 +249,7 @@ export default function AdminSweetForm() {
                   placeholder="Enter sweet name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="border-sweet-accent/50 focus:border-sweet-primary"
+                  className="border-[#F7CAC9]/50 focus:border-[#DC143C]"
                   required
                 />
               </div>
@@ -234,7 +258,7 @@ export default function AdminSweetForm() {
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Select value={formData.category} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="border-sweet-accent/50 focus:border-sweet-primary">
+                  <SelectTrigger className="border-[#F7CAC9]/50 focus:border-[#DC143C]">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -260,7 +284,7 @@ export default function AdminSweetForm() {
                     placeholder="0.00"
                     value={formData.price}
                     onChange={handleInputChange}
-                    className="border-sweet-accent/50 focus:border-sweet-primary"
+                    className="border-[#F7CAC9]/50 focus:border-[#DC143C]"
                     required
                   />
                 </div>
@@ -274,7 +298,7 @@ export default function AdminSweetForm() {
                         variant="outline"
                         size="sm"
                         onClick={handleRestock}
-                        className="border-sweet-primary text-sweet-primary hover:bg-sweet-primary hover:text-white"
+                        className="border-[#DC143C] text-[#DC143C] hover:bg-[#DC143C] hover:text-white"
                       >
                         Restock +10
                       </Button>
@@ -288,7 +312,7 @@ export default function AdminSweetForm() {
                     placeholder="0"
                     value={formData.quantity}
                     onChange={handleInputChange}
-                    className="border-sweet-accent/50 focus:border-sweet-primary"
+                    className="border-[#F7CAC9]/50 focus:border-[#DC143C]"
                     required
                   />
                 </div>
@@ -303,7 +327,7 @@ export default function AdminSweetForm() {
                   placeholder="Enter sweet description"
                   value={formData.description}
                   onChange={handleInputChange}
-                  className="border-sweet-accent/50 focus:border-sweet-primary min-h-[100px]"
+                  className="border-[#F7CAC9]/50 focus:border-[#DC143C] min-h-[100px]"
                   rows={4}
                 />
               </div>
@@ -314,14 +338,14 @@ export default function AdminSweetForm() {
                   type="button"
                   variant="outline"
                   onClick={() => navigate('/dashboard')}
-                  className="border-sweet-primary text-sweet-primary hover:bg-sweet-primary hover:text-white"
+                  className="border-[#DC143C] text-[#DC143C] hover:bg-[#DC143C] hover:text-white"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="bg-sweet-primary hover:bg-sweet-primary/90 text-white"
+                  className="bg-[#DC143C] hover:bg-[#DC143C]/90 text-white"
                 >
                   {isLoading ? (
                     <div className="flex items-center">

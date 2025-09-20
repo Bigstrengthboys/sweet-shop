@@ -1,107 +1,138 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProductCard from "./ProductCard";
 import { motion } from "framer-motion";
+import { supabase } from "@/lib/supabase";
 
 interface Product {
   id: string;
   name: string;
   price: number;
-  image: string;
+  image_url: string | null;
   category: string;
-  available: boolean;
+  quantity: number;
 }
 
 interface ProductGridProps {
-  products?: Product[];
-  searchTerm?: string;
   selectedCategory?: string;
+  searchTerm?: string;
   priceRange?: [number, number];
 }
 
 const ProductGrid = ({
-  products = [
-    {
-      id: "1",
-      name: "Gulab Jamun",
-      price: 3.99,
-      image: "/images/Gulab Jamun.jpeg",
-      category: "Traditional",
-      available: true,
-    },
-    {
-      id: "2",
-      name: "Kaju Katli",
-      price: 5.49,
-      image: "/images/kaju katli.jpeg",
-      category: "Premium",
-      available: true,
-    },
-    {
-      id: "3",
-      name: "Rasmalai",
-      price: 4.99,
-      image: "/images/Rasmalai.jpeg",
-      category: "Milk Based",
-      available: false,
-    },
-    {
-      id: "4",
-      name: "Jalebi",
-      price: 2.99,
-      image: "/images/jalebi.jpeg",
-      category: "Crispy",
-      available: true,
-    },
-    {
-      id: "5",
-      name: "Rasgulla",
-      price: 3.49,
-      image: "/images/Rasgulla.jpeg",
-      category: "Spongy",
-      available: true,
-    },
-    {
-      id: "6",
-      name: "Motichur Ladoo",
-      price: 3.99,
-      image: "/images/Moti chur ladoo.jpeg",
-      category: "Ladoos",
-      available: true,
-    },
-    {
-      id: "7",
-      name: "Kalakand",
-      price: 4.99,
-      image: "/images/Kalakand.jpeg",
-      category: "Milk Based",
-      available: true,
-    },
-    {
-      id: "8",
-      name: "Chhena Poda",
-      price: 5.29,
-      image: "/images/Chhena Poda.jpeg",
-      category: "Baked",
-      available: false,
-    },
-  ],
-  searchTerm = "",
   selectedCategory = "",
-  priceRange = [0, 10],
+  searchTerm = "",
+  priceRange = [0, 500],
 }: ProductGridProps) => {
-  // Filter products based on search term, category, and price range
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory
-      ? product.category === selectedCategory
-      : true;
-    const matchesPrice =
-      product.price >= priceRange[0] && product.price <= priceRange[1];
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-    return matchesSearch && matchesCategory && matchesPrice;
-  });
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sweets')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      // Fallback to mock data if Supabase fails
+      const mockProducts = [
+        {
+          id: "1",
+          name: "Gulab Jamun",
+          price: 120,
+          image_url: "/images/Gulab Jamun.jpeg",
+          category: "traditional",
+          quantity: 25,
+        },
+        {
+          id: "2",
+          name: "Kaju Katli",
+          price: 450,
+          image_url: "/images/kaju katli.jpeg",
+          category: "premium",
+          quantity: 15,
+        },
+        {
+          id: "3",
+          name: "Rasmalai",
+          price: 180,
+          image_url: "/images/Rasmalai.jpeg",
+          category: "milk-based",
+          quantity: 0,
+        },
+        {
+          id: "4",
+          name: "Jalebi",
+          price: 90,
+          image_url: "/images/jalebi.jpeg",
+          category: "crispy",
+          quantity: 30,
+        },
+        {
+          id: "5",
+          name: "Rasgulla",
+          price: 100,
+          image_url: "/images/Rasgulla.jpeg",
+          category: "spongy",
+          quantity: 20,
+        },
+        {
+          id: "6",
+          name: "Motichur Ladoo",
+          price: 150,
+          image_url: "/images/Moti chur ladoo.jpeg",
+          category: "ladoos",
+          quantity: 12,
+        },
+        {
+          id: "7",
+          name: "Kalakand",
+          price: 200,
+          image_url: "/images/Kalakand.jpeg",
+          category: "milk-based",
+          quantity: 8,
+        },
+        {
+          id: "8",
+          name: "Chhena Poda",
+          price: 250,
+          image_url: "/images/Chhena Poda.jpeg",
+          category: "baked",
+          quantity: 5,
+        },
+      ];
+      setProducts(mockProducts);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Filter products based on search term, category, and price range
+  useEffect(() => {
+    const filtered = products.filter((product) => {
+      const matchesSearch = product.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory
+        ? product.category === selectedCategory
+        : true;
+      const matchesPrice =
+        product.price >= priceRange[0] && product.price <= priceRange[1];
+
+      return matchesSearch && matchesCategory && matchesPrice;
+    });
+
+    setFilteredProducts(filtered);
+  }, [products, searchTerm, selectedCategory, priceRange]);
 
   // Animation variants for the container
   const containerVariants = {
@@ -127,13 +158,17 @@ const ProductGrid = ({
     },
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#DC143C]"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-[#FDEBD0] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <h2 className="text-3xl font-bold text-[#DC143C] mb-8 text-center">
-          Our Traditional Indian Sweets
-        </h2>
-
         {filteredProducts.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-xl text-gray-600">
@@ -153,8 +188,10 @@ const ProductGrid = ({
                   id={product.id}
                   name={product.name}
                   price={product.price}
-                  image={product.image}
-                  available={product.available}
+                  image={product.image_url || '/images/Gulab Jamun.jpeg'}
+                  category={product.category}
+                  quantity={product.quantity}
+                  available={product.quantity > 0}
                 />
               </motion.div>
             ))}

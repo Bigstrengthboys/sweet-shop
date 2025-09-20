@@ -1,17 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Search, 
   Plus, 
   Edit, 
   Trash2, 
-  ShoppingCart, 
-  User, 
   LogOut, 
   Package,
   TrendingUp,
@@ -20,6 +16,7 @@ import {
 } from 'lucide-react';
 import ProductCard from '@/components/ProductCard';
 import SearchFilterBar from '@/components/SearchFilterBar';
+import { supabase } from '@/lib/supabase';
 
 interface Sweet {
   id: string;
@@ -27,7 +24,8 @@ interface Sweet {
   category: string;
   price: number;
   quantity: number;
-  image: string;
+  image_url: string | null;
+  description: string | null;
 }
 
 interface User {
@@ -37,83 +35,20 @@ interface User {
   isAdmin: boolean;
 }
 
-export default function Dashboard() {
+interface DashboardProps {
+  selectedCategory?: string;
+  onCategoryChange?: (category: string) => void;
+}
+
+export default function Dashboard({ selectedCategory = '', onCategoryChange = () => {} }: DashboardProps) {
   const [user, setUser] = useState<User | null>(null);
   const [sweets, setSweets] = useState<Sweet[]>([]);
   const [filteredSweets, setFilteredSweets] = useState<Sweet[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [currentCategory, setCurrentCategory] = useState('');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-
-  // Mock data for sweets
-  const mockSweets: Sweet[] = [
-    {
-      id: "1",
-      name: "Gulab Jamun",
-      category: "traditional",
-      price: 120,
-      quantity: 25,
-      image: "/images/Gulab Jamun.jpeg"
-    },
-    {
-      id: "2", 
-      name: "Kaju Katli",
-      category: "premium",
-      price: 450,
-      quantity: 15,
-      image: "/images/kaju katli.jpeg"
-    },
-    {
-      id: "3",
-      name: "Rasmalai",
-      category: "milk-based",
-      price: 180,
-      quantity: 0,
-      image: "/images/Rasmalai.jpeg"
-    },
-    {
-      id: "4",
-      name: "Jalebi",
-      category: "crispy",
-      price: 90,
-      quantity: 30,
-      image: "/images/jalebi.jpeg"
-    },
-    {
-      id: "5",
-      name: "Rasgulla",
-      category: "spongy",
-      price: 100,
-      quantity: 20,
-      image: "/images/Rasgulla.jpeg"
-    },
-    {
-      id: "6",
-      name: "Motichur Ladoo",
-      category: "ladoos",
-      price: 150,
-      quantity: 12,
-      image: "/images/Moti chur ladoo.jpeg"
-    },
-    {
-      id: "7",
-      name: "Kalakand",
-      category: "milk-based",
-      price: 200,
-      quantity: 8,
-      image: "/images/Kalakand.jpeg"
-    },
-    {
-      id: "8",
-      name: "Chhena Poda",
-      category: "baked",
-      price: 250,
-      quantity: 5,
-      image: "/images/Chhena Poda.jpeg"
-    }
-  ];
 
   useEffect(() => {
     // Check authentication
@@ -129,29 +64,50 @@ export default function Dashboard() {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
       
-      // Simulate API call to fetch sweets
-      setTimeout(() => {
-        setSweets(mockSweets);
-        setFilteredSweets(mockSweets);
-        setIsLoading(false);
-      }, 1000);
+      // Fetch sweets from Supabase
+      fetchSweets();
     } catch (error) {
       navigate('/login');
     }
   }, [navigate]);
 
+  // Set selected category when prop changes
+  useEffect(() => {
+    if (selectedCategory) {
+      setCurrentCategory(selectedCategory);
+    }
+  }, [selectedCategory]);
+
+  const fetchSweets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sweets')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setSweets(data || []);
+      setFilteredSweets(data || []);
+    } catch (error) {
+      console.error('Error fetching sweets:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Filter sweets based on search and filters
   useEffect(() => {
     let filtered = sweets.filter(sweet => {
       const matchesSearch = sweet.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === '' || selectedCategory === 'all' || sweet.category === selectedCategory;
+      const matchesCategory = currentCategory === '' || currentCategory === 'all' || sweet.category === currentCategory;
       const matchesPrice = sweet.price >= priceRange[0] && sweet.price <= priceRange[1];
       
       return matchesSearch && matchesCategory && matchesPrice;
     });
     
     setFilteredSweets(filtered);
-  }, [sweets, searchTerm, selectedCategory, priceRange]);
+  }, [sweets, searchTerm, currentCategory, priceRange]);
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -161,30 +117,39 @@ export default function Dashboard() {
 
   const handlePurchase = async (sweetId: string) => {
     try {
-      // Simulate API call to POST /api/sweets/:id/purchase
-      const response = await fetch(`/api/sweets/${sweetId}/purchase`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const sweet = sweets.find(s => s.id === sweetId);
+      if (!sweet || sweet.quantity <= 0) return;
 
-      if (response.ok) {
-        // Update local state
-        setSweets(prev => prev.map(sweet => 
-          sweet.id === sweetId 
-            ? { ...sweet, quantity: Math.max(0, sweet.quantity - 1) }
-            : sweet
-        ));
+      // Update quantity in database
+      const { error } = await supabase
+        .from('sweets')
+        .update({ quantity: sweet.quantity - 1 })
+        .eq('id', sweetId);
+
+      if (error) throw error;
+
+      // Record purchase
+      if (user) {
+        await supabase
+          .from('purchases')
+          .insert([
+            {
+              user_id: user.id,
+              sweet_id: sweetId,
+              quantity: 1,
+              total_price: sweet.price
+            }
+          ]);
       }
-    } catch (error) {
-      // For demo, just update local state
+
+      // Update local state
       setSweets(prev => prev.map(sweet => 
         sweet.id === sweetId 
           ? { ...sweet, quantity: Math.max(0, sweet.quantity - 1) }
           : sweet
       ));
+    } catch (error) {
+      console.error('Error purchasing sweet:', error);
     }
   };
 
@@ -199,28 +164,24 @@ export default function Dashboard() {
   const handleDeleteSweet = async (sweetId: string) => {
     if (window.confirm('Are you sure you want to delete this sweet?')) {
       try {
-        // Simulate API call to DELETE /api/sweets/:id
-        const response = await fetch(`/api/sweets/${sweetId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          },
-        });
+        const { error } = await supabase
+          .from('sweets')
+          .delete()
+          .eq('id', sweetId);
 
-        if (response.ok) {
-          setSweets(prev => prev.filter(sweet => sweet.id !== sweetId));
-        }
-      } catch (error) {
-        // For demo, just update local state
+        if (error) throw error;
+
         setSweets(prev => prev.filter(sweet => sweet.id !== sweetId));
+      } catch (error) {
+        console.error('Error deleting sweet:', error);
       }
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-sweet-bg flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sweet-primary"></div>
+      <div className="min-h-screen bg-[#FDEBD0] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#DC143C]"></div>
       </div>
     );
   }
@@ -234,30 +195,30 @@ export default function Dashboard() {
   const outOfStock = sweets.filter(sweet => sweet.quantity === 0).length;
 
   return (
-    <div className="min-h-screen bg-sweet-bg">
+    <div className="min-h-screen bg-[#FDEBD0]">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-sweet-accent/20">
+      <header className="bg-white shadow-sm border-b border-[#F7CAC9]/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <div className="bg-gradient-to-r from-sweet-primary to-sweet-secondary p-2 rounded-lg">
+              <div className="bg-gradient-to-r from-[#DC143C] to-[#F75270] p-2 rounded-lg">
                 <Package className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-sweet-primary">Sweet Shop Dashboard</h1>
+                <h1 className="text-xl font-bold text-[#DC143C]">Sweet Shop Dashboard</h1>
                 <p className="text-sm text-gray-600">Welcome back, {user.name}!</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
-              <Badge variant="outline" className="border-sweet-primary text-sweet-primary">
+              <Badge variant="outline" className="border-[#DC143C] text-[#DC143C]">
                 {user.isAdmin ? 'Admin' : 'Customer'}
               </Badge>
               <Button
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="border-sweet-primary text-sweet-primary hover:bg-sweet-primary hover:text-white"
+                className="border-[#DC143C] text-[#DC143C] hover:bg-[#DC143C] hover:text-white"
               >
                 <LogOut className="h-4 w-4 mr-1" />
                 Logout
@@ -273,7 +234,7 @@ export default function Dashboard() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <Package className="h-8 w-8 text-sweet-primary" />
+                <Package className="h-8 w-8 text-[#DC143C]" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Sweets</p>
                   <p className="text-2xl font-bold text-gray-900">{totalSweets}</p>
@@ -330,7 +291,7 @@ export default function Dashboard() {
             {user.isAdmin && (
               <Button 
                 onClick={handleAddSweet}
-                className="bg-sweet-primary hover:bg-sweet-primary/90 text-white"
+                className="bg-[#DC143C] hover:bg-[#DC143C]/90 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Sweet
@@ -342,7 +303,7 @@ export default function Dashboard() {
             {/* Search and Filter */}
             <SearchFilterBar
               onSearch={setSearchTerm}
-              onCategoryChange={setSelectedCategory}
+              onCategoryChange={setCurrentCategory}
               onPriceRangeChange={setPriceRange}
             />
 
@@ -354,7 +315,7 @@ export default function Dashboard() {
                     id={sweet.id}
                     name={sweet.name}
                     price={sweet.price}
-                    image={sweet.image}
+                    image={sweet.image_url || '/images/Gulab Jamun.jpeg'}
                     category={sweet.category}
                     quantity={sweet.quantity}
                     available={sweet.quantity > 0}
@@ -396,24 +357,18 @@ export default function Dashboard() {
           {user.isAdmin && (
             <TabsContent value="admin" className="space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>Admin Panel</CardTitle>
-                  <CardDescription>
-                    Manage your sweet inventory and view analytics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+                <CardContent className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Button 
                       onClick={handleAddSweet}
-                      className="bg-sweet-primary hover:bg-sweet-primary/90 text-white h-20"
+                      className="bg-[#DC143C] hover:bg-[#DC143C]/90 text-white h-20"
                     >
                       <Plus className="h-6 w-6 mr-2" />
                       Add New Sweet
                     </Button>
                     <Button 
                       variant="outline"
-                      className="border-sweet-primary text-sweet-primary hover:bg-sweet-primary hover:text-white h-20"
+                      className="border-[#DC143C] text-[#DC143C] hover:bg-[#DC143C] hover:text-white h-20"
                     >
                       <TrendingUp className="h-6 w-6 mr-2" />
                       View Analytics
