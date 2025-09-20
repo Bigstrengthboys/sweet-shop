@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ProductGrid from "./ProductGrid";
 import SearchFilterBar from "./SearchFilterBar";
+import { Link } from "react-router-dom";
 
 const Home = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -33,8 +34,8 @@ const Home = () => {
     },
   };
 
-  // Mock categories for the navbar
-  const categories = ["Cakes", "Cookies", "Candies", "Chocolates", "Pastries"];
+  // Mock categories for the navbar - updated for Indian sweets
+  const categories = ["Ladoos", "Barfis", "Rasgullas", "Jalebis", "Kaju Katli"];
 
   return (
     <div className="min-h-screen bg-[#FDEBD0] flex flex-col">
@@ -70,15 +71,19 @@ const Home = () => {
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  className="border-[#F75270] text-[#F75270] hover:bg-[#F7CAC9] hover:text-[#DC143C]"
-                >
-                  Login
-                </Button>
-                <Button className="bg-[#F75270] text-white hover:bg-[#DC143C]">
-                  Register
-                </Button>
+                <Link to="/login">
+                  <Button
+                    variant="outline"
+                    className="border-[#F75270] text-[#F75270] hover:bg-[#F7CAC9] hover:text-[#DC143C]"
+                  >
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button className="bg-[#F75270] text-white hover:bg-[#DC143C]">
+                    Register
+                  </Button>
+                </Link>
               </div>
             )}
           </div>
@@ -124,15 +129,19 @@ const Home = () => {
                 </div>
               ) : (
                 <div className="flex flex-col space-y-2 py-2">
-                  <Button
-                    variant="outline"
-                    className="border-[#F75270] text-[#F75270] hover:bg-[#F7CAC9] hover:text-[#DC143C]"
-                  >
-                    Login
-                  </Button>
-                  <Button className="bg-[#F75270] text-white hover:bg-[#DC143C]">
-                    Register
-                  </Button>
+                  <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                    <Button
+                      variant="outline"
+                      className="w-full border-[#F75270] text-[#F75270] hover:bg-[#F7CAC9] hover:text-[#DC143C]"
+                    >
+                      Login
+                    </Button>
+                  </Link>
+                  <Link to="/register" onClick={() => setIsMenuOpen(false)}>
+                    <Button className="w-full bg-[#F75270] text-white hover:bg-[#DC143C]">
+                      Register
+                    </Button>
+                  </Link>
                 </div>
               )}
             </div>
@@ -154,11 +163,11 @@ const Home = () => {
               variants={itemVariants}
             >
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#DC143C] mb-4">
-                Delicious Treats for Every Sweet Tooth
+                Authentic Indian Sweets for Every Sweet Tooth
               </h1>
               <p className="text-lg md:text-xl text-gray-700 mb-8">
-                Handcrafted with love, our sweets bring joy to every occasion.
-                Discover our collection of cakes, cookies, and candies.
+                Handcrafted with love, our traditional Indian sweets bring joy to every occasion.
+                Discover our collection of ladoos, barfis, and classic mithai.
               </p>
               <Button className="bg-[#DC143C] hover:bg-[#F75270] text-white px-8 py-6 text-lg rounded-full">
                 Shop Now
@@ -167,16 +176,16 @@ const Home = () => {
             <motion.div className="md:w-1/2 relative" variants={itemVariants}>
               <div className="relative">
                 <img
-                  src="https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=800&q=80"
-                  alt="Colorful candies and sweets"
+                  src="/images/first.jpeg"
+                  alt="Traditional Indian sweets"
                   className="rounded-2xl shadow-lg w-full"
                 />
 
-                {/* Animated candy illustrations */}
+                {/* Animated sweet illustrations */}
                 <motion.img
-                  src="https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=200&q=80"
-                  alt="Candy"
-                  className="absolute -top-10 -left-10 w-24 h-24 rounded-full shadow-md hidden md:block"
+                  src="/images/Gulab Jamun.jpeg"
+                  alt="Gulab Jamun"
+                  className="absolute -top-10 -left-10 w-24 h-24 rounded-full shadow-md hidden md:block object-cover"
                   animate={{
                     y: [0, -10, 0],
                     rotate: [0, 5, 0],
@@ -188,9 +197,9 @@ const Home = () => {
                   }}
                 />
                 <motion.img
-                  src="https://images.unsplash.com/photo-1582058091505-f87a2e55a40f?w=200&q=80"
-                  alt="Candy"
-                  className="absolute -bottom-10 -right-10 w-28 h-28 rounded-full shadow-md hidden md:block"
+                  src="/images/jalebi.jpeg"
+                  alt="Jalebi"
+                  className="absolute -bottom-10 -right-10 w-28 h-28 rounded-full shadow-md hidden md:block object-cover"
                   animate={{
                     y: [0, 10, 0],
                     rotate: [0, -5, 0],
@@ -219,7 +228,7 @@ const Home = () => {
       <section className="py-12 bg-white">
         <div className="container mx-auto px-4 md:px-8">
           <h2 className="text-3xl font-bold text-[#DC143C] mb-8">
-            Our Sweet Collection
+            Our Traditional Indian Sweets
           </h2>
           <ProductGrid />
         </div>
@@ -235,7 +244,7 @@ const Home = () => {
               </h2>
               <p className="text-lg text-gray-700 mb-6">
                 Enjoy our seasonal specials and limited-time offers. Perfect for
-                gifts or treating yourself!
+                festivals, celebrations, or treating yourself to authentic Indian mithai!
               </p>
               <Button className="bg-[#DC143C] hover:bg-[#F75270] text-white">
                 View Specials
@@ -243,8 +252,8 @@ const Home = () => {
             </div>
             <div className="md:w-1/2">
               <img
-                src="https://images.unsplash.com/photo-1551024601-bec78aea704b?w=800&q=80"
-                alt="Special offers"
+                src="/images/mix sweet bg.jpeg"
+                alt="Special offers on Indian sweets"
                 className="rounded-2xl shadow-lg w-full"
               />
             </div>
@@ -283,8 +292,8 @@ const Home = () => {
                   </div>
                 </div>
                 <p className="text-gray-700">
-                  "The sweets from this shop are absolutely amazing! The flavors
-                  are incredible and the presentation is beautiful. Will
+                  "The Indian sweets from this shop are absolutely amazing! The flavors
+                  are authentic and the presentation is beautiful. Will
                   definitely order again!"
                 </p>
               </div>

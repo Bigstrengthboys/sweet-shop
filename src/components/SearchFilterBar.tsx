@@ -25,7 +25,7 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [category, setCategory] = useState("all");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -45,11 +45,13 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
 
   const categories = [
     { value: "all", label: "All Categories" },
-    { value: "cakes", label: "Cakes" },
-    { value: "cookies", label: "Cookies" },
-    { value: "candies", label: "Candies" },
-    { value: "chocolates", label: "Chocolates" },
-    { value: "pastries", label: "Pastries" },
+    { value: "traditional", label: "Traditional" },
+    { value: "premium", label: "Premium" },
+    { value: "milk-based", label: "Milk Based" },
+    { value: "crispy", label: "Crispy" },
+    { value: "spongy", label: "Spongy" },
+    { value: "ladoos", label: "Ladoos" },
+    { value: "baked", label: "Baked" },
   ];
 
   return (
@@ -62,7 +64,7 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
           />
           <Input
             type="text"
-            placeholder="Search for sweets..."
+            placeholder="Search for mithai..."
             value={searchTerm}
             onChange={handleSearchChange}
             className="pl-10 border-[#F7CAC9] focus:border-[#F75270] rounded-full"
@@ -91,7 +93,7 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
               >
                 <SlidersHorizontal size={16} />
                 <span>
-                  Price: ${priceRange[0]} - ${priceRange[1]}
+                  Price: ₹{priceRange[0]} - ₹{priceRange[1]}
                 </span>
               </Button>
             </PopoverTrigger>
@@ -99,16 +101,16 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
               <div className="space-y-4">
                 <h4 className="font-medium text-sm">Price Range</h4>
                 <Slider
-                  defaultValue={[0, 100]}
-                  max={100}
-                  step={1}
+                  defaultValue={[0, 500]}
+                  max={500}
+                  step={10}
                   value={[priceRange[0], priceRange[1]]}
                   onValueChange={handlePriceRangeChange}
                   className="[&>span]:bg-[#F75270]"
                 />
                 <div className="flex items-center justify-between">
-                  <p className="text-sm">${priceRange[0]}</p>
-                  <p className="text-sm">${priceRange[1]}</p>
+                  <p className="text-sm">₹{priceRange[0]}</p>
+                  <p className="text-sm">₹{priceRange[1]}</p>
                 </div>
               </div>
             </PopoverContent>
